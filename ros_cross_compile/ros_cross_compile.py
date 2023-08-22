@@ -28,7 +28,6 @@ from ros_cross_compile.builders import EmulatedDockerBuildStage
 from ros_cross_compile.data_collector import DataCollector
 from ros_cross_compile.data_collector import DataWriter
 from ros_cross_compile.dependencies import CollectDependencyListStage
-from ros_cross_compile.docker_client import DEFAULT_COLCON_DEFAULTS_FILE
 from ros_cross_compile.docker_client import DockerClient
 from ros_cross_compile.pipeline_stages import PipelineStageOptions
 from ros_cross_compile.platform import Platform
@@ -83,7 +82,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         '-d', '--rosdistro',
         required=False,
         type=str,
-        default='dashing',
+        default='foxy',
         choices=SUPPORTED_ROS_DISTROS + SUPPORTED_ROS2_DISTROS,
         help='Target ROS distribution')
     parser.add_argument(
@@ -97,7 +96,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         required=False,
         type=str,
         help='Override the default base Docker image to use for building the sysroot. '
-             'Ex. "arm64v8/ubuntu:bionic"')
+             'Ex. "arm64v8/ubuntu:focal"')
     parser.add_argument(
         '--sysroot-nocache',
         action='store_true',
@@ -142,9 +141,9 @@ def parse_args(args: List[str]) -> argparse.Namespace:
     parser.add_argument(
         '--colcon-defaults',
         required=False,
-        default=DEFAULT_COLCON_DEFAULTS_FILE,
+        default=None,
         type=str,
-        help='Relative path within the workspace to a file that provides colcon arguments. '
+        help='Provide a path to a configuration file that provides colcon arguments. '
              'See "Package Selection and Build Customization" in README.md for more details.')
     parser.add_argument(
         '--skip-rosdep-keys',
@@ -200,6 +199,7 @@ def cross_compile_pipeline(
     custom_rosdep_script = _path_if(args.custom_rosdep_script)
     custom_setup_script = _path_if(args.custom_setup_script)
     custom_post_build_script = _path_if(args.custom_post_build_script)
+    colcon_defaults_file = _path_if(args.colcon_defaults)
 
     override_sysroot_image_tag = args.use_build_image
     if (override_sysroot_image_tag):
@@ -210,11 +210,11 @@ def cross_compile_pipeline(
         ros_workspace=ros_workspace_dir,
         custom_setup_script=custom_setup_script,
         custom_post_build_script=custom_post_build_script,
+        colcon_defaults_file=colcon_defaults_file,
         custom_data_dir=custom_data_dir)
     docker_client = DockerClient(
         args.sysroot_nocache,
-        default_docker_dir=sysroot_build_context,
-        colcon_defaults_file=args.colcon_defaults)
+        default_docker_dir=sysroot_build_context)
 
     options = PipelineStageOptions(
         skip_rosdep_keys,
@@ -256,7 +256,7 @@ def main():
 
 
 if __name__ == '__main__':
-    if sys.version_info < (3, 6):
+    if sys.version_info < (3, 7):
         logger.warning('You are using an unsupported version of Python.'
-                       'Cross-compile only supports Python >= 3.6 per the ROS2 REP 2000.')
+                       'Cross-compile only supports Python >= 3.7 per the ROS2 REP 2000.')
     main()

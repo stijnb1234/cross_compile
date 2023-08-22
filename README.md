@@ -1,3 +1,8 @@
+## Notice: This repository is deprecated. It is outdated and will not be supported anymore.
+It is recommended to use a native cross-compilation method, which can be up to 8 times faster.
+See details in this ROS Discourse discussion:
+https://discourse.ros.org/t/call-for-help-maintainership-of-the-ros-cross-compile-tool/26511
+
 # ROS / ROS 2 Cross Compile Tool
 
 ![License](https://img.shields.io/github/license/ros-tooling/cross_compile)
@@ -16,7 +21,7 @@ This tool supports compiling a workspace for all combinations of the following:
 * Architecture: `armhf`, `aarch64`, `x86_64`
 * ROS Distro
   * ROS: `melodic`, `noetic`
-  * ROS 2: `dashing`, `foxy`, `galactic`, `rolling`
+  * ROS 2: `foxy`, `galactic`, `humble`, `rolling`
 * OS: `Ubuntu`, `Debian`
 
 NOTE: ROS 2 supports Debian only as a Tier 3 platform.
@@ -29,7 +34,7 @@ It is recommended to use a release branch of `ros2.repos` from https://github.co
 This tool officially supports running on the following host systems.
 Note that many others likely work, but these are being thoroughly tested.
 
-* Ubuntu 18.04 Bionic Beaver
+* Ubuntu 20.04 Focal
 * OSX Mojave
 
 ## Installation
@@ -39,7 +44,7 @@ Note that many others likely work, but these are being thoroughly tested.
 This tool requires that you have already installed
 * [Docker](https://docs.docker.com/install/)
   * Follow the instructions to add yourself to the `docker` group as well, so you can run containers as a non-root user
-* Python 3.6 or higher
+* Python 3.7 or higher
 
 If you are using a Linux host, you must also install QEmu (Docker for OSX performs emulation automatically):
 
@@ -97,7 +102,7 @@ To build, it runs `colcon build`.
 
 You can provide arbitrary arguments to these commands via the [colcon `defaults.yaml`](https://colcon.readthedocs.io/en/released/user/configuration.html#defaults-yaml).
 
-You can either specify the name of this file via `ros_cross_compile --colcon-defaults relative/path/to/defaults.yaml`, or if not specified, a file called `defaults.yaml` will be used if present.
+You can either specify the name of this file via `ros_cross_compile --colcon-defaults /path/to/defaults.yaml`, or if not specified, a file called `defaults.yaml` will be used if present.
 
 For example, there are repositories checked out in your workspace that contain packages that are not needed for your application - some repos provide many packages and you may only want one!
 In this scenario there is a "bringup" package that acts as the entry point to your application:
@@ -114,6 +119,15 @@ build:
   merge-install: true
 ```
 
+Other configurations can be passed and used as command line args. Examples are CMake build arguments, like the build type or the verb configurations for the event handlers:
+
+```yaml
+# my_workspace/defaults.yaml
+build:
+  cmake-args: ["-DCMAKE_BUILD_TYPE=Release"]
+  event-handlers: ["console_direct+"]
+```
+
 ### Custom rosdep script
 
 Your ROS application may need nonstandard rosdep rules.
@@ -122,7 +136,8 @@ If so, you have the option to provide a script to be run before the `rosdep inst
 This script has access to the "Custom data directory" same as the "Custom setup script", see the following sections. If you need any extra files for setting up rosdep, they can be accessed via this custom data directory.
 
 Note that:
-1. Rosdeps are always collected in an Ubuntu Bionic container, so scripts must be compatible with that
+1. Rosdeps for melodic collected in an Ubuntu focal container for all other ROS distros 
+   rosdeps collected in an Ubuntu Focal container, so scripts must be compatible with that
 
 Here is an example script for an application that adds extra rosdep source lists
 
@@ -295,12 +310,19 @@ build:
   # only build the demo_nodes_cpp package, to save time building all of the demos
   packages-up-to:
     - demo_nodes_cpp
+  # make a merged install space, which is easier to distribute
+  merge-install: true
+  # add some output for readability
+  event-handlers:
+    - console_cohesion+
+    - console_package_list+
+
 ```
 
 ### Running the cross-compilation
 
 ```bash
-ros_cross_compile . --rosdistro foxy --arch aarch64 --os ubuntu
+ros_cross_compile . --rosdistro foxy --arch aarch64 --os ubuntu --colcon-defaults ./defaults.yaml
 ```
 
 Here is a detailed look at the arguments passed to the script (`ros_cross_compile -h` will print all valid choices for each option):
@@ -331,7 +353,6 @@ defaults.yaml
 install_aarch64/
 log/
 src/
-tutorial.repos
 ```
 
 * The created directory `install_aarch64` is the installation of your ROS workspace for your target architecture.
@@ -349,6 +370,8 @@ install_aarch64/demo_nodes_cpp/lib/demo_nodes_cpp/talker: ELF 64-bit LSB shared 
 Copy `install_aarch64` onto the target system into a location of your choosing. It contains the binaries for _your_ workspace.
 
 If your workspace has any dependencies that are outside the source tree - that is, if `rosdep` had anything to install during the build - then you still need to install these dependencies on the target system.
+
+Note first: if you need `rosdep` to install packages via the package manager, then your system will need its package manager sources (APT for Ubuntu). See [Setup Sources](https://docs.ros.org/en/foxy/Installation/Ubuntu-Install-Debians.html#setup-sources) portion of ROS 2 installation instructions for an example of how to do this on Ubuntu.
 
 ```bash
 # Run this on the target system, which must have rosdep already installed
@@ -421,7 +444,7 @@ This library is licensed under the Apache 2.0 License.
 | ROS 2 Release | Branch Name     | Development | Source Debian Package | X86-64 Debian Package | ARM64 Debian Package | ARMHF Debian package |
 | ------------- | --------------- | ----------- | --------------------- | --------------------- | -------------------- | -------------------- |
 | Latest        | `master`        | [![Test Pipeline Status](https://github.com/ros-tooling/cross_compile/workflows/Test%20cross_compile/badge.svg)](https://github.com/ros-tooling/cross_compile/actions) | N/A                   | N/A                   | N/A                  | N/A                  |
-| Dashing       | `dashing-devel` | [![Build Status](http://build.ros2.org/buildStatus/icon?job=Ddev__cross_compile__ubuntu_bionic_amd64)](http://build.ros2.org/job/Ddev__cross_compile__ubuntu_bionic_amd64) | [![Build Status](http://build.ros2.org/buildStatus/icon?job=Dsrc_uB__cross_compile__ubuntu_bionic__source)](http://build.ros2.org/job/Dsrc_uB__cross_compile__ubuntu_bionic__source) | [![Build Status](http://build.ros2.org/buildStatus/icon?job=Dbin_uB64__cross_compile__ubuntu_bionic_amd64__binary)](http://build.ros2.org/job/Dbin_uB64__cross_compile__ubuntu_bionic_amd64__binary) | N/A | N/A |
+| Foxy          | `foxy-devel`    | [![Build Status](http://build.ros2.org/buildStatus/icon?job=Ddev__cross_compile__ubuntu_focal_amd64)](http://build.ros2.org/job/Ddev__cross_compile__ubuntu_focal_amd64) | [![Build Status](http://build.ros2.org/buildStatus/icon?job=Dsrc_uB__cross_compile__ubuntu_focal__source)](http://build.ros2.org/job/Dsrc_uB__cross_compile__ubuntu_focal__source) | [![Build Status](http://build.ros2.org/buildStatus/icon?job=Dbin_uB64__cross_compile__ubuntu_focal_amd64__binary)](http://build.ros2.org/job/Dbin_uB64__cross_compile__ubuntu_focal_amd64__binary) | N/A | N/A |
 
 
 [ros2_dev_setup]: https://index.ros.org/doc/ros2/Installation/Latest-Development-Setup/

@@ -60,10 +60,16 @@ def gather_rosdeps(
     out_path = rosdep_install_script(platform)
 
     logger.info('Building rosdep collector image: %s', _IMG_NAME)
-    docker_client.build_image(
-        dockerfile_name='rosdep.Dockerfile',
-        tag=_IMG_NAME,
-    )
+    if platform.ros_distro == 'melodic':
+        docker_client.build_image(
+            dockerfile_name='rosdep.Dockerfile',
+            tag=_IMG_NAME,
+        )
+    else:
+        docker_client.build_image(
+            dockerfile_name='rosdep_focal.Dockerfile',
+            tag=_IMG_NAME,
+        )
 
     logger.info('Running rosdep collector image on workspace {}'.format(workspace))
     volumes = {
@@ -82,6 +88,7 @@ def gather_rosdeps(
             'OWNER_USER': str(os.getuid()),
             'ROSDISTRO': platform.ros_distro,
             'SKIP_ROSDEP_KEYS': ' '.join(skip_rosdep_keys),
+            'COLCON_DEFAULTS_FILE': 'defaults.yaml',
             'TARGET_OS': '{}:{}'.format(platform.os_name, platform.os_distro),
         },
         volumes=volumes,

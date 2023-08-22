@@ -31,8 +31,7 @@ ENV LC_ALL C.UTF-8
 RUN apt-get update && apt-get install --no-install-recommends -y \
         ca-certificates \
         curl \
-        dirmngr \
-        gnupg2 \
+        gnupg \
         lsb-release \
     && rm -rf /var/lib/apt/lists/*
 RUN if [[ "${ROS_VERSION}" == "ros2" ]]; then \
@@ -98,6 +97,10 @@ RUN chmod +x install_rosdeps.sh
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
     ./install_rosdeps.sh && \
     rm -rf /var/lib/apt/lists/*
+
+# Copy colcon defaults config and set COLCON_DEFAULTS_FILE
+COPY defaults.yaml /root
+ENV COLCON_DEFAULTS_FILE=/root/defaults.yaml
 
 # Set up build tools for the workspace
 COPY mixins/ mixins/
